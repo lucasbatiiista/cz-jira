@@ -1,6 +1,6 @@
 {
   "name": "cz-jira-keys",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Commitizen adapter.",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "engines": {
     "node": ">= 10"
   },
-  "author": "Jim Cummins <jimthedev@gmail.com>",
+  "author": "Lucas Batista <lucasbatista@outlook.com>",
   "license": "MIT",
   "dependencies": {
     "chalk": "^3.0.0",

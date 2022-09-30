@@ -1,5 +1,5 @@
 {
-  "name": "cz-jira",
+  "name": "cz-jira-keys",
   "version": "0.0.1",
   "description": "Commitizen adapter.",
   "main": "index.js",

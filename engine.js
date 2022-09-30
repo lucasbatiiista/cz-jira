@@ -23,7 +23,10 @@ var maxSummaryLength = function(options, answers) {
 
 var filterSubject = function(subject, disableSubjectLowerCase) {
   subject = subject.trim();
-  if (!disableSubjectLowerCase && subject.charAt(0).toLowerCase() !== subject.charAt(0)) {
+  if (
+    !disableSubjectLowerCase &&
+    subject.charAt(0).toLowerCase() !== subject.charAt(0)
+  ) {
     subject =
       subject.charAt(0).toLowerCase() + subject.slice(1, subject.length);
   }
@@ -69,6 +72,32 @@ module.exports = function(options) {
       // collection library if you prefer.
       cz.prompt([
         {
+          type: 'input',
+          name: 'storyKey',
+          message: 'What is the story key? (e.g. 12345):',
+          validate: function(storyKey) {
+            return storyKey && storyKey.length > 0
+              ? true
+              : 'Story key is required';
+          },
+          filter: function(storyKey) {
+            return storyKey.replace(/\D/g, '');
+          }
+        },
+        {
+          type: 'input',
+          name: 'subtaskKey',
+          message: 'What is the sub-task key? (e.g. 12345):',
+          validate: function(subTaskKey) {
+            return subTaskKey && subTaskKey.length > 0
+              ? true
+              : 'Sub-task key is required';
+          },
+          filter: function(subTaskKey) {
+            return subTaskKey.replace(/\D/g, '');
+          }
+        },
+        {
           type: 'list',
           name: 'type',
           message: "Select the type of change that you're committing:",
@@ -79,8 +108,10 @@ module.exports = function(options) {
           type: 'input',
           name: 'scope',
           message:
-            'What is the scope of this change (e.g. component or file name): (press enter to skip)',
-          default: options.defaultScope,
+            'What is the scope of this change (e.g. component or file name):',
+          validate: function(scope) {
+            return scope.length === 0 ? 'Scope is required' : true;
+          },
           filter: function(value) {
             return options.disableScopeLowerCase
               ? value.trim()
@@ -90,102 +121,17 @@ module.exports = function(options) {
         {
           type: 'input',
           name: 'subject',
-          message: function(answers) {
-            return (
-              'Write a short, imperative tense description of the change (max ' +
-              maxSummaryLength(options, answers) +
-              ' chars):\n'
-            );
-          },
+          message: 'Write a description of the change:',
           default: options.defaultSubject,
-          validate: function(subject, answers) {
-            var filteredSubject = filterSubject(subject, options.disableSubjectLowerCase);
+          validate: function(subject) {
+            var filteredSubject = filterSubject(
+              subject,
+              options.disableSubjectLowerCase
+            );
             return filteredSubject.length == 0
-              ? 'subject is required'
-              : filteredSubject.length <= maxSummaryLength(options, answers)
-              ? true
-              : 'Subject length must be less than or equal to ' +
-                maxSummaryLength(options, answers) +
-                ' characters. Current length is ' +
-                filteredSubject.length +
-                ' characters.';
-          },
-          transformer: function(subject, answers) {
-            var filteredSubject = filterSubject(subject, options.disableSubjectLowerCase);
-            var color =
-              filteredSubject.length <= maxSummaryLength(options, answers)
-                ? chalk.green
-                : chalk.red;
-            return color('(' + filteredSubject.length + ') ' + subject);
-          },
-          filter: function(subject) {
-            return filterSubject(subject, options.disableSubjectLowerCase);
+              ? 'description is required'
+              : true;
           }
-        },
-        {
-          type: 'input',
-          name: 'body',
-          message:
-            'Provide a longer description of the change: (press enter to skip)\n',
-          default: options.defaultBody
-        },
-        {
-          type: 'confirm',
-          name: 'isBreaking',
-          message: 'Are there any breaking changes?',
-          default: false
-        },
-        {
-          type: 'input',
-          name: 'breakingBody',
-          default: '-',
-          message:
-            'A BREAKING CHANGE commit requires a body. Please enter a longer description of the commit itself:\n',
-          when: function(answers) {
-            return answers.isBreaking && !answers.body;
-          },
-          validate: function(breakingBody, answers) {
-            return (
-              breakingBody.trim().length > 0 ||
-              'Body is required for BREAKING CHANGE'
-            );
-          }
-        },
-        {
-          type: 'input',
-          name: 'breaking',
-          message: 'Describe the breaking changes:\n',
-          when: function(answers) {
-            return answers.isBreaking;
-          }
-        },
-
-        {
-          type: 'confirm',
-          name: 'isIssueAffected',
-          message: 'Does this change affect any open issues?',
-          default: options.defaultIssues ? true : false
-        },
-        {
-          type: 'input',
-          name: 'issuesBody',
-          default: '-',
-          message:
-            'If issues are closed, the commit requires a body. Please enter a longer description of the commit itself:\n',
-          when: function(answers) {
-            return (
-              answers.isIssueAffected && !answers.body && !answers.breakingBody
-            );
-          }
-        },
-        {
-          type: 'input',
-          name: 'issues',
-          message: 'Add issue references (e.g. "fix #123", "re #123".):\n',
-          when: function(answers) {
-            return answers.isIssueAffected;
-          },
-          default: options.defaultIssues ? options.defaultIssues : undefined
         }
       ]).then(function(answers) {
         var wrapOptions = {
@@ -196,25 +142,16 @@ module.exports = function(options) {
           width: options.maxLineWidth
         };
 
-        // parentheses are only needed when a scope is present
-        var scope = answers.scope ? '(' + answers.scope + ')' : '';
+        var storyKey = `[BEESOT-${answers.storyKey}]`;
+        var subtaskKey = `[BEESOT-${answers.subtaskKey}]`;
+        var type = `${answers.type}`;
+        var scope = `[${answers.scope}]`;
+        var subject = `${answers.subject}`;
 
         // Hard limit this line in the validate
-        var head = answers.type + scope + ': ' + answers.subject;
+        var head = `${storyKey}${subtaskKey} ${type} ${scope}: ${subject}`;
 
-        // Wrap these lines at options.maxLineWidth characters
-        var body = answers.body ? wrap(answers.body, wrapOptions) : false;
-
-        // Apply breaking change prefix, removing it if already present
-        var breaking = answers.breaking ? answers.breaking.trim() : '';
-        breaking = breaking
-          ? 'BREAKING CHANGE: ' + breaking.replace(/^BREAKING CHANGE: /, '')
-          : '';
-        breaking = breaking ? wrap(breaking, wrapOptions) : false;
-
-        var issues = answers.issues ? wrap(answers.issues, wrapOptions) : false;
-
-        commit(filter([head, body, breaking, issues]).join('\n\n'));
+        commit(filter([head]).join('\n\n'));
       });
     }
   };

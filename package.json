@@ -1,7 +1,7 @@
 {
-  "name": "cz-conventional-changelog",
+  "name": "cz-jira",
   "version": "0.0.1",
-  "description": "Commitizen adapter following the conventional-changelog format.",
+  "description": "Commitizen adapter.",
   "main": "index.js",
   "scripts": {
     "commit": "git-cz",
@@ -9,10 +9,10 @@
     "format": "prettier --write *.js",
     "semantic-release": "semantic-release"
   },
-  "homepage": "https://github.com/commitizen/cz-conventional-changelog",
+  "homepage": "https://github.com/lucasbatiiista/cz-jira",
   "repository": {
     "type": "git",
-    "url": "https://github.com/commitizen/cz-conventional-changelog.git"
+    "url": "https://github.com/lucasbatiiista/cz-jira"
   },
   "engineStrict": true,
   "engines": {

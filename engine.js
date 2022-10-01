@@ -1,27 +1,16 @@
 'format cjs';
 
-var wrap = require('word-wrap');
-var map = require('lodash.map');
-var longest = require('longest');
-var chalk = require('chalk');
+const map = require('lodash.map');
+const longest = require('longest');
+const readConfigFile = require('./read-config-file.js');
 
-var filter = function(array) {
+const filter = function(array) {
   return array.filter(function(x) {
     return x;
   });
 };
 
-var headerLength = function(answers) {
-  return (
-    answers.type.length + 2 + (answers.scope ? answers.scope.length + 2 : 0)
-  );
-};
-
-var maxSummaryLength = function(options, answers) {
-  return options.maxHeaderWidth - headerLength(answers);
-};
-
-var filterSubject = function(subject, disableSubjectLowerCase) {
+const filterSubject = function(subject, disableSubjectLowerCase) {
   subject = subject.trim();
   if (
     !disableSubjectLowerCase &&
@@ -40,10 +29,10 @@ var filterSubject = function(subject, disableSubjectLowerCase) {
 // We use Commonjs here, but ES6 or AMD would do just
 // fine.
 module.exports = function(options) {
-  var types = options.types;
+  const types = options.types;
 
-  var length = longest(Object.keys(types)).length + 1;
-  var choices = map(types, function(type, key) {
+  const length = longest(Object.keys(types)).length + 1;
+  const choices = map(types, function(type, key) {
     return {
       name: (key + ':').padEnd(length) + ' ' + type.description,
       value: key
@@ -70,31 +59,47 @@ module.exports = function(options) {
       // See inquirer.js docs for specifics.
       // You can also opt to use another input
       // collection library if you prefer.
+      const config = readConfigFile();
+      let jiraKey = 'OS';
+
+      if (config) {
+        if (config.jiraKey) jiraKey = config.jiraKey;
+      }
+
       cz.prompt([
         {
           type: 'input',
           name: 'storyKey',
-          message: 'What is the story key? (e.g. 12345):',
-          validate: function(storyKey) {
-            return storyKey && storyKey.length > 0
-              ? true
-              : 'Story key is required';
+          message: `What is the story key? (e.g. ${jiraKey}-12345):`,
+          transformer: function(storyKey) {
+            return `${jiraKey}-${storyKey}`;
           },
-          filter: function(storyKey) {
-            return storyKey.replace(/\D/g, '');
+          validate: function(storyKey) {
+            if (!storyKey || storyKey.length === 0) {
+              return 'Story key is required';
+            }
+
+            if (/\D/g.test(storyKey)) return 'Story key only supports numbers';
+
+            return true;
           }
         },
         {
           type: 'input',
           name: 'subtaskKey',
-          message: 'What is the sub-task key? (e.g. 12345):',
-          validate: function(subTaskKey) {
-            return subTaskKey && subTaskKey.length > 0
-              ? true
-              : 'Sub-task key is required';
+          message: `What is the sub-task key? (e.g. ${jiraKey}-12345):`,
+          transformer: function(subtaskKey) {
+            return `${jiraKey}-${subtaskKey}`;
           },
-          filter: function(subTaskKey) {
-            return subTaskKey.replace(/\D/g, '');
+          validate: function(subtaskKey) {
+            if (!subtaskKey || subtaskKey.length === 0) {
+              return 'Sub-task key is required';
+            }
+
+            if (/\D/g.test(subtaskKey))
+              return 'Sub-task key only supports numbers';
+
+            return true;
           }
         },
         {
@@ -124,7 +129,7 @@ module.exports = function(options) {
           message: 'Write a description of the change:',
           default: options.defaultSubject,
           validate: function(subject) {
-            var filteredSubject = filterSubject(
+            const filteredSubject = filterSubject(
               subject,
               options.disableSubjectLowerCase
             );
@@ -134,22 +139,14 @@ module.exports = function(options) {
           }
         }
       ]).then(function(answers) {
-        var wrapOptions = {
-          trim: true,
-          cut: false,
-          newline: '\n',
-          indent: '',
-          width: options.maxLineWidth
-        };
-
-        var storyKey = `[BEESOT-${answers.storyKey}]`;
-        var subtaskKey = `[BEESOT-${answers.subtaskKey}]`;
-        var type = `${answers.type}`;
-        var scope = `[${answers.scope}]`;
-        var subject = `${answers.subject}`;
+        const storyKey = `[${jiraKey}-${answers.storyKey}]`;
+        const subtaskKey = `[${jiraKey}-${answers.subtaskKey}]`;
+        const type = `${answers.type}`;
+        const scope = `[${answers.scope}]`;
+        const subject = `${answers.subject}`;
 
         // Hard limit this line in the validate
-        var head = `${storyKey}${subtaskKey} ${type} ${scope}: ${subject}`;
+        const head = `${storyKey}${subtaskKey} ${type} ${scope}: ${subject}`;
 
         commit(filter([head]).join('\n\n'));
       });
